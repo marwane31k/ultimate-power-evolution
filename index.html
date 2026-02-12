@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+
+<html><!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Responsive -->
+<title>Ultimate Power Evolution</title>
+<style>
+html {
+    scroll-behavior: smooth; /* Scroll fluide */
+}
+body { 
+    font-family: Arial, sans-serif; 
+    background: #1b1b1b; 
+    color: #fff; 
+    text-align: center; 
+    margin: 0; 
+    padding: 0; 
+    overflow-y: auto; /* Permet le scroll vertical sur tout le body */
+}
+h1,h3{margin:10px;}
+.container { 
+    display:flex; 
+    flex-wrap: wrap; 
+    justify-content:center; 
+    max-width: 100%; 
+}
+.card { 
+    background:#2b2b2b; 
+    border-radius:10px; 
+    padding:15px; 
+    margin:10px; 
+    width:250px; 
+    text-align:center; 
+    box-shadow: 0 0 10px #000; 
+}
+button { 
+    margin:5px; 
+    padding:8px 12px; 
+    font-size:14px; 
+    cursor:pointer; 
+    border:none; 
+    border-radius:5px; 
+    background:#444; 
+    color:#fff; 
+}
+button:hover { background:#666; }
+.stats { margin:10px; }
+#monstre { font-weight:bold; margin-top:20px; }
+hr { margin:20px 0; border-color:#444; }
+/* Conteneurs scrollables si besoin */
+.scrollable {
+    max-height: 400px; /* ou 80vh pour un pourcentage de la fenêtre */
+    overflow-y: auto;
+}
+</style>
+</head>
+<body>
+<h1>Ultimate Power Evolution</h1>
+
+<div class="stats">
+<p>Argent : $<span id="money">0</span></p>
+<p>Niveau : <span id="level">1</span></p>
+<p>Prestige : <span id="prestige">0</span></p>
+<p>Titre : <span id="title">Aucun</span></p>
+<p>Race : <span id="race">Aucune</span></p>
+<p>Clan : <span id="clan">Aucun</span></p>
+<p>Transformation : <span id="transformation">Aucune</span></p>
+<p>Arme équipée : <span id="weapon">Aucune</span></p>
+<p>Mana : <span id="mana">100</span>/<span id="maxMana">100</span></p>
+<p id="monstre">Monstre Niveau 1</p>
+<p>PV Monstre : <span id="monsterHp">70</span></p>
+</div>
+
+<hr>
+
+<div class="container">
+
+  <div class="card">
+    <h3>Actions</h3>
+    <button id="attackBtn">Attaquer</button>
+  </div>
+
+  <div class="card">
+    <h3>Renaissances</h3>
+    <button onclick="performPrestige('classique')">Renaissance Classique (Niveau ≥ 50)</button><br>
+    <button onclick="performPrestige('super')">Super Renaissance (Niveau ≥ 100 & Prestige ≥ 1)</button><br>
+    <button onclick="performPrestige('ultra')">Renaissance Ultra (Niveau ≥ 200 & Prestige ≥ 3)</button><br>
+    <button onclick="performPrestige('end')">Renaissance End (Niveau ≥ 500 & Prestige ≥ 10)</button>
+  </div>
+
+  <div class="card scrollable"> <!-- Scrollable -->
+    <h3>Shop - Tirages au hasard</h3>
+    <button onclick="buyRandomRace()">Tirer une race ($500)</button><br>
+    <button onclick="buyRandomClan()">Tirer un clan ($500)</button><br>
+    <button onclick="buyRandomWeapon()">Tirer une arme ($1000)</button><br>
+    <button onclick="buyRandomTransformation()">Tirer une transformation ($2000)</button><br>
+    <button onclick="buyRandomSkill()">Tirer une capacité spéciale ($3000)</button><br>
+    <button onclick="buyRandomAttack()">Acheter une attaque ($1000)</button>
+  </div>
+
+  <div class="card scrollable"> <!-- Scrollable -->
+    <h3>Attaques Disponibles</h3>
+    <div id="abilities"></div>
+  </div>
+
+</div>
+
+<script>
+// ------------------- Joueur -------------------
+let player = {
+    money:0, baseAttack:10, attack:10, level:1, prestige:0, weapon:null, transformation:null,
+    title:null, race:null, clan:null, maxMana:100, mana:100, abilities:[],
+    infiniteMana:false, regen:false, attackBoost:false
+};
+
+// ------------------- Titres -------------------
+let titles = [
+{name:"Nul", minLevel:1, bonus:0},{name:"Débutant", minLevel:5, bonus:1},{name:"Novice", minLevel:10, bonus:2},
+{name:"Expérimenté", minLevel:20, bonus:5},{name:"Héros", minLevel:30, bonus:10},{name:"Roi", minLevel:40, bonus:15},
+{name:"Roi Démon", minLevel:50, bonus:20},{name:"Dieu", minLevel:60, bonus:30},{name:"Dieu de la Destruction", minLevel:70, bonus:50},
+{name:"Roi des Pirates", minLevel:80, bonus:70},{name:"Ange", minLevel:90, bonus:100}
+];
+
+// ------------------- Races -------------------
+let races = [
+{name:"Humain", bonus:0},{name:"Nain", bonus:2},{name:"Dragon", bonus:10},{name:"Dieu", bonus:20},
+{name:"Démon", bonus:15},{name:"Ange", bonus:20},{name:"Elfe", bonus:5},{name:"Homme", bonus:0},
+{name:"Animaux", bonus:1},{name:"Elfe de Glace", bonus:8},{name:"Demi-dieu", bonus:15},{name:"Elfe Noir", bonus:12},{name:"Ko", bonus:0}];
+
+// ------------------- Clans -------------------
+let clans = [
+{name:"Uzumaki", bonusAttack:5, bonusMana:20},{name:"Zenin", bonusAttack:10, bonusMana:0},
+{name:"Gojo", bonusAttack:15, bonusMana:30},{name:"Itadori", bonusAttack:8, bonusMana:10},
+{name:"Uchiwa", bonusAttack:12, bonusMana:15},{name:"Fushiguro", bonusAttack:10, bonusMana:20},
+{name:"Okotsu", bonusAttack:7, bonusMana:10},{name:"Haruno", bonusAttack:5, bonusMana:25}
+];
+
+// ------------------- Armes -------------------
+let weaponsList = [
+{name:"Épée basique", bonus:5},{name:"Lance de feu", bonus:20},{name:"Hache de destruction", bonus:50},
+{name:"Épée en Bois", bonus:100},{name:"Excalibur", bonus:300},{name:"Mjolnir", bonus:500},
+{name:"Arc Divin", bonus:400},{name:"Enma", bonus:1000}
+];
+
+// ------------------- Transformations -------------------
+let transformationsList = [
+{name:"Super Saiyan 1", bonus:5, level:1},{name:"Super Saiyan 2", bonus:10, level:1},
+{name:"Super Saiyan 3", bonus:20, level:1},{name:"Super Saiyan 4", bonus:40, level:1},
+{name:"Super Saiyan Bleu", bonus:60, level:1},{name:"Super Saiyan Rouge", bonus:100, level:1},
+{name:"Ultra Instinct", bonus:200, level:1},{name:"Ultra Ego", bonus:400, level:1}
+];
+
+// ------------------- Attaques -------------------
+let abilitiesList = [
+{name:"Boule de Feu", damage:200, manaCost:30, cost:1000},
+{name:"Boule d'Eau", damage:150, manaCost:25, cost:1000},
+{name:"Boule de Lave", damage:400, manaCost:60, cost:2500},
+{name:"Séisme", damage:500, manaCost:80, cost:3000},
+{name:"Void", damage:700, manaCost:100, cost:5000},
+{name:"Éclair", damage:300, manaCost:50, cost:1500},
+{name:"Vent tranchant", damage:180, manaCost:20, cost:1200},
+{name:"Tempête d’ombre", damage:350, manaCost:70, cost:3000},
+{name:"Explosion cosmique", damage:1000, manaCost:150, cost:7000}
+];
+
+// ------------------- Capacités Spéciales -------------------
+let skillsList = [
+{name:"Mana Infini", effect:function(){player.infiniteMana=true;}},
+{name:"Régénération", effect:function(){player.regen=true;}},
+{name:"Boost d’attaque", effect:function(){player.attackBoost=true;}}
+];
+
+// ------------------- Monstres -------------------
+let monsters = [];
+for(let lvl=1; lvl<=100; lvl++){
+    let isBoss = lvl%10===0;
+    let name="Monstre Niveau "+lvl;
+    let hp = 50+lvl*20;
+    let attack=5+lvl*5;
+    let reward=10+lvl*10;
+    if(isBoss){switch(lvl){
+        case 10: name="Roi Gobelin"; hp=1000; attack=50; reward=500; break;
+        case 20: name="Roi Humain"; hp=1500; attack=80; reward=800; break;
+        case 30: name="Roi Démon"; hp=2000; attack=120; reward=1200; break;
+        case 40: name="Roi Dragon"; hp=2500; attack=160; reward=1600; break;
+        case 50: name="Roi Ange"; hp=3000; attack=200; reward=2000; break;
+        case 60: name="Dieu"; hp=4000; attack=300; reward=3000; break;
+        case 70: name="Roi Dieu"; hp=5000; attack=400; reward=4000; break;
+        case 80: name="Roi de Ko"; hp=6000; attack=500; reward=5000; break;
+        case 90: name="Fusion de tous les dieux"; hp=8000; attack=700; reward=7000; break;
+        case 100: name="Le Dieu de Tous"; hp=10000; attack=1000; reward=10000; break;
+    }}
+    monsters.push({name:name,hp:hp,attack:attack,reward:reward});
+}
+let currentMonster = {...monsters[0]};
+
+// ------------------- Fonctions Utilitaires -------------------
+function updateDisplay(){
+    document.getElementById("money").innerText=player.money;
+    document.getElementById("level").innerText=player.level;
+    document.getElementById("prestige").innerText=player.prestige;
+    document.getElementById("monsterHp").innerText=currentMonster.hp;
+    document.getElementById("monstre").innerText=currentMonster.name;
+    document.getElementById("weapon").innerText=player.weapon?player.weapon.name:"Aucune";
+    document.getElementById("transformation").innerText=player.transformation?player.transformation.name+" Lv"+player.transformation.level:"Aucune";
+    document.getElementById("title").innerText=player.title?player.title.name:"Aucun";
+    document.getElementById("race").innerText=player.race?player.race.name:"Aucune";
+    document.getElementById("clan").innerText=player.clan?player.clan.name:"Aucun";
+    document.getElementById("mana").innerText=player.mana;
+    document.getElementById("maxMana").innerText=player.maxMana;
+}
+
+function updateTitle(){
+    for(let i=titles.length-1;i>=0;i--){
+        if(player.level>=titles[i].minLevel){
+            player.title=titles[i];
+            player.attack = player.baseAttack + (player.weapon?player.weapon.bonus:0) +
+                            (player.transformation?player.transformation.bonus:0) +
+                            (player.race?player.race.bonus:0) +
+                            (player.clan?player.clan.bonusAttack:0) +
+                            titles[i].bonus;
+            if(player.attackBoost) player.attack = Math.floor(player.attack*1.5);
+            break;
+        }
+    }
+    if(player.clan) player.maxMana=100+player.clan.bonusMana;
+}
+
+// ------------------- Shop -------------------
+function buyRandom(list, cost) {
+    if(player.money<cost){alert("Pas assez d'argent !"); return null;}
+    player.money-=cost;
+    return list[Math.floor(Math.random()*list.length)];
+}
+
+function buyRandomRace(){ let r = buyRandom(races,500); if(r){player.race=r; updateTitle(); updateDisplay(); alert(`Tu as obtenu la race : ${r.name} !`); } }
+function buyRandomClan(){ let c = buyRandom(clans,500); if(c){player.clan=c; updateTitle(); updateDisplay(); alert(`Tu as obtenu le clan : ${c.name} !`); } }
+function buyRandomWeapon(){ let w = buyRandom(weaponsList,1000); if(w){player.weapon=w; updateTitle(); updateDisplay(); alert(`Tu as obtenu l'arme : ${w.name} !`); } }
+function buyRandomTransformation(){ let t = buyRandom(transformationsList,2000); if(t){player.transformation=t; updateTitle(); updateDisplay(); alert(`Tu as obtenu la transformation : ${t.name} !`); } }
+function buyRandomSkill(){ let s = buyRandom(skillsList,3000); if(s){s.effect(); updateDisplay(); alert(`Tu as obtenu la capacité spéciale : ${s.name} !`); } }
+function buyRandomAttack(){ 
+    let a = buyRandom(abilitiesList.filter(x=>!player.abilities.includes(x)),1000);
+    if(a){player.abilities.push(a); updateDisplay(); alert(`Tu as obtenu l'attaque : ${a.name} !`);}
+}
+
+// ------------------- Attaques -------------------
+function renderAbilities(){
+    let container=document.getElementById("abilities");
+    container.innerHTML="";
+    player.abilities.forEach(a=>{
+        let btn=document.createElement("button");
+        btn.innerText=`${a.name} dmg:${a.damage} mana:${a.manaCost}`;
+        btn.onclick=function(){
+            if(!player.infiniteMana && player.mana<a.manaCost){alert("Pas assez de mana !"); return;}
+            if(!player.infiniteMana) player.mana-=a.manaCost;
+            currentMonster.hp-=a.damage;
+            alert(`${a.name} inflige ${a.damage} dégâts !`);
+            if(currentMonster.hp<=0){player.money+=currentMonster.reward; player.level++; currentMonster={...monsters[(player.level-1)%monsters.length]}; alert("Monstre vaincu ! Argent gagné : $"+currentMonster.reward); updateTitle();}
+            updateDisplay();
+            renderAbilities();
+        };
+        container.appendChild(btn);
+    });
+}
+
+// ------------------- Attaque de base -------------------
+document.getElementById("attackBtn").onclick=function(){
+    currentMonster.hp-=player.attack; 
+    if(currentMonster.hp<=0){player.money+=currentMonster.reward; player.level++; currentMonster={...monsters[(player.level-1)%monsters.length]}; alert("Monstre vaincu ! Argent gagné : $"+currentMonster.reward); updateTitle();}
+    updateDisplay();
+}
+
+// ------------------- Renaissance -------------------
+function performPrestige(type){
+    let can=false; 
+    switch(type){
+        case"classique": can=player.level>=50; if(!can){alert("Niveau ≥ 50 requis !"); return;} break;
+        case"super": can=player.level>=100 && player.prestige>=1; if(!can){alert("Niveau ≥ 100 & Prestige ≥ 1 requis !"); return;} break;
+        case"ultra": can=player.level>=200 && player.prestige>=3; if(!can){alert("Niveau ≥ 200 & Prestige ≥ 3 requis !"); return;} break;
+        case"end": can=player.level>=500 && player.prestige>=10; if(!can){alert("Niveau ≥ 500 & Prestige ≥ 10 requis !"); return;} break;
+    }
+    let bonus=0; switch(type){case"classique":bonus=5;break; case"super":bonus=20;break; case"ultra":bonus=50;break; case"end":bonus=100;break;}
+    player.money=0; player.baseAttack+=bonus; player.attack=player.baseAttack; player.level=1; player.weapon=null; player.transformation=null; player.abilities=[]; player.prestige++; currentMonster={...monsters[0]};
+    updateTitle(); updateDisplay(); renderAbilities(); alert(`${type.toUpperCase()} Renaissance effectuée ! +${bonus} attaque`);
+}
+
+// ------------------- Auto argent & régénération -------------------
+setInterval(function(){player.money+=1+player.prestige; if(player.regen&&player.mana<player.maxMana) player.mana+=2; if(player.mana>player.maxMana) player.mana=player.maxMana; updateDisplay();},1000);
+
+updateTitle(); updateDisplay();
+renderAbilities();
+</script>
+</body>
+</html>
